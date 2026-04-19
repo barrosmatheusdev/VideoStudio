@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VideoStudio</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0c0f;--s1:#111116;--s2:#17171e;--s3:#1e1e28;--s4:#252532;
+  --b1:#2a2a38;--b2:#383848;--b3:#4a4a60;
+  --acc:#c8ff57;--acc2:#ff5c5c;--acc3:#5cc8ff;--acc4:#ffb347;
+  --txt:#eeeef5;--txt2:#9999b8;--txt3:#55556a;
+  --mono:'JetBrains Mono',monospace;--ui:'Syne',sans-serif;
+  --r:4px;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--ui);overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--s1)}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+
+/* ── TOP BAR ── */
+#topbar{
+  height:52px;display:flex;align-items:center;gap:16px;padding:0 20px;
+  background:var(--s1);border-bottom:1px solid var(--b1);
+  position:relative;z-index:100;flex-shrink:0;
+}
+#topbar::after{content:'';position:absolute;bottom:-1px;left:0;width:220px;height:1px;background:var(--acc)}
+.logo{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.logo em{color:var(--acc);font-style:normal}
+.logo-badge{font-family:var(--mono);font-size:9px;color:var(--txt3);border:1px solid var(--b1);padding:2px 7px;border-radius:2px;margin-left:8px}
+.top-spacer{flex:1}
+.top-file{font-family:var(--mono);font-size:11px;color:var(--txt3);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── STEP NAV ── */
+#steps{
+  display:flex;align-items:center;gap:0;
+  background:var(--s2);border-bottom:1px solid var(--b1);
+  flex-shrink:0;
+}
+.step{
+  display:flex;align-items:center;gap:10px;padding:13px 24px;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--txt3);cursor:pointer;position:relative;transition:all .2s;
+  border-right:1px solid var(--b1);
+}
+.step:hover{color:var(--txt2);background:var(--s3)}
+.step.active{color:var(--acc);background:var(--s3)}
+.step.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--acc)}
+.step.done{color:var(--txt2)}
+.step.done .step-num{background:var(--acc);color:#000}
+.step-num{
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;
+  background:var(--s4);color:var(--txt3);flex-shrink:0;transition:all .2s;
+}
+.step.active .step-num{background:var(--acc);color:#000}
+.step-arrow{color:var(--b2);padding:0 4px;font-size:10px}
+
+/* ── MAIN LAYOUT ── */
+#layout{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* ── PANELS (pages) ── */
+.panel{display:none;width:100%;height:100%;flex-direction:column;overflow:hidden}
+.panel.active{display:flex}
+
+/* ══════════════════════════ STEP 1: UPLOAD ══════════════════════════ */
+#step1{align-items:center;justify-content:center;background:var(--bg)}
+.upload-box{
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+  padding:64px 80px;
+  border:2px dashed var(--b2);border-radius:8px;
+  cursor:pointer;transition:all .3s;max-width:540px;text-align:center;
+}
+.upload-box:hover,.upload-box.drag{border-color:var(--acc);background:rgba(200,255,87,.03)}
+.upload-icon{font-size:56px;opacity:.25}
+.upload-title{font-size:24px;font-weight:800}
+.upload-sub{font-family:var(--mono);font-size:12px;color:var(--txt3)}
+.upload-hint{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-top:4px}
+.upload-btn{
+  margin-top:8px;padding:12px 32px;
+  background:var(--acc);color:#000;border:none;
+  font-family:var(--ui);font-size:13px;font-weight:700;
+  border-radius:var(--r);cursor:pointer;transition:all .15s;
+}
+.upload-btn:hover{background:#b8ef40;transform:translateY(-1px)}
+
+/* ══════════════════════════ STEP 2+3: EDITOR ══════════════════════════ */
+#editor-layout{
+  display:flex;width:100%;height:100%;min-height:0;overflow:hidden;
+}
+/* left: video + timeline */
+#left-col{
+  flex:1;min-width:0;display:flex;flex-direction:column;
+  border-right:1px solid var(--b1);
+}
+/* video wrapper */
+#video-wrap{
+  flex:1;min-height:0;background:#000;
+  display:flex;align-items:center;justify-content:center;position:relative;
+}
+#videoEl{max-width:100%;max-height:100%;display:block}
+
+/* subtitle preview overlay */
+#sub-preview{
+  position:absolute;left:0;right:0;bottom:0;
+  display:flex;justify-content:center;align-items:flex-end;
+  padding:0 16px 24px;pointer-events:none;
+}
+#sub-preview-text{
+  position:absolute;                    /* ← ADICIONE ESTA LINHA */
+  font-family:Arial,sans-serif;font-size:18px;color:#fff;
+  text-shadow:1px 1px 3px #000,-1px -1px 3px #000;
+  text-align:center;line-height:1.5;background:rgba(0,0,0,.45);
+  padding:6px 14px;border-radius:3px;max-width:90%;
+  transition:opacity .1s;
+}
+
+/* playback bar */
+#playbar{
+  background:var(--s1);border-top:1px solid var(--b1);
+  padding:10px 16px;display:flex;align-items:center;gap:14px;
+  flex-shrink:0;
+}
+.play-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--acc);border:none;cursor:pointer;color:#000;
+  font-size:13px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;
+}
+.play-btn:hover{background:#b8ef40;transform:scale(1.05)}
+#time-disp{font-family:var(--mono);font-size:11px;color:var(--txt2);white-space:nowrap}
+#vol-wrap{display:flex;align-items:center;gap:6px;color:var(--txt3);font-size:11px;flex-shrink:0}
+.range-sm{width:72px;-webkit-appearance:none;height:3px;background:var(--s4);border-radius:2px;outline:none;cursor:pointer}
+.range-sm::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;background:var(--txt2);border-radius:50%;cursor:pointer}
+
+/* ── TIMELINE ── */
+#timeline-wrap{
+  background:var(--s2);border-top:1px solid var(--b1);
+  flex-shrink:0;height:130px;display:flex;flex-direction:column;
+}
+#tl-header{
+  display:flex;align-items:center;gap:12px;padding:6px 14px;
+  border-bottom:1px solid var(--b1);flex-shrink:0;
+}
+#tl-header span{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3)}
+.tl-zoom{background:var(--s3);border:1px solid var(--b1);color:var(--txt2);font-size:10px;padding:3px 8px;border-radius:2px;cursor:pointer;font-family:var(--mono)}
+.tl-zoom:hover{border-color:var(--b2);color:var(--txt)}
+#timeline-scroll{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;cursor:default}
+#timeline-canvas-wrap{position:relative;height:100%}
+#waveCanvas{position:absolute;top:0;left:0;pointer-events:none}
+#segCanvas{position:absolute;top:0;left:0}
+#playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--acc);pointer-events:none;z-index:10}
+#playhead::before{content:'';position:absolute;top:0;left:-5px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--acc)}
+
+/* ── RIGHT SIDEBAR ── */
+#right-col{
+  width:340px;flex-shrink:0;
+  display:flex;flex-direction:column;background:var(--s1);
+  overflow:hidden;
+}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--b1);flex-shrink:0}
+.stab{
+  flex:1;padding:13px 4px;text-align:center;font-size:10px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);
+  cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;
+  font-family:var(--ui);transition:all .2s;
+}
+.stab:hover{color:var(--txt2)}
+.stab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.stab-body{display:none;flex-direction:column;flex:1;overflow-y:auto;padding:14px;gap:10px}
+.stab-body.active{display:flex}
+
+/* ── TRANSCRIBE PANEL ── */
+.tlang{display:flex;flex-direction:column;gap:6px}
+.tlang label{font-size:10px;font-family:var(--mono);color:var(--txt2)}
+select,input[type=text],input[type=number]{
+  background:var(--s3);border:1px solid var(--b1);color:var(--txt);
+  padding:8px 10px;border-radius:var(--r);font-family:var(--mono);font-size:12px;
+  outline:none;width:100%;transition:border .15s;
+}
+select:focus,input:focus{border-color:var(--acc)}
+select option{background:var(--s2)}
+.prog-wrap{display:flex;flex-direction:column;gap:6px}
+.prog-lbl{font-family:var(--mono);font-size:11px;color:var(--txt2)}
+.prog-bg{background:var(--s3);border-radius:2px;height:5px;overflow:hidden}
+.prog-fill{height:100%;background:var(--acc);border-radius:2px;transition:width .3s}
+
+/* ── SEG LIST ── */
+#seg-list{display:flex;flex-direction:column;gap:4px}
+.seg-item{
+  background:var(--s3);border:1px solid var(--b1);
+  border-radius:var(--r);padding:8px 10px;cursor:pointer;
+  transition:all .15s;position:relative;
+}
+.seg-item:hover{border-color:var(--b2)}
+.seg-item.active{border-color:var(--acc);background:rgba(200,255,87,.06)}
+.seg-time{font-family:var(--mono);font-size:9px;color:var(--txt3);margin-bottom:4px;display:flex;gap:6px;align-items:center}
+.seg-time input{
+  background:var(--s4);border:1px solid var(--b1);color:var(--txt2);
+  padding:2px 5px;width:68px;font-size:9px;border-radius:2px;
+}
+.seg-time input:focus{border-color:var(--acc)}
+.seg-txt{
+  font-size:12px;color:var(--txt2);line-height:1.4;
+  outline:none;border:none;background:none;width:100%;resize:none;
+  font-family:var(--ui);
+}
+.seg-txt:focus{color:var(--txt)}
+.seg-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--txt3);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:2px;opacity:0;transition:all .15s}
+.seg-item:hover .seg-del{opacity:1}
+.seg-del:hover{color:var(--acc2);background:rgba(255,92,92,.1)}
+
+/* ── STYLE PANEL ── */
+.sec-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--txt3);margin-bottom:2px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.preset-btn{
+  padding:10px 8px;background:var(--s3);border:2px solid var(--b1);
+  border-radius:var(--r);cursor:pointer;text-align:center;transition:all .15s;
+  font-family:var(--ui);font-size:11px;font-weight:600;color:var(--txt2);
+}
+.preset-btn:hover{border-color:var(--b2);color:var(--txt)}
+.preset-btn.active{border-color:var(--acc);color:var(--acc);background:rgba(200,255,87,.06)}
+.preview-box{
+  background:#000;border-radius:var(--r);aspect-ratio:16/5;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  border:1px solid var(--b1);padding:8px;
+}
+#style-preview-text{
+  text-align:center;line-height:1.5;pointer-events:none;transition:all .2s;
+}
+.divider{border:none;border-top:1px solid var(--b1);margin:2px 0}
+.row{display:flex;gap:8px}
+.row .field{flex:1}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:10px;font-family:var(--mono);color:var(--txt2)}
+.color-swatches{display:flex;gap:5px;flex-wrap:wrap}
+.cswatch{
+  width:26px;height:26px;border-radius:3px;cursor:pointer;
+  border:2px solid transparent;transition:all .15s;
+  flex-shrink:0;
+}
+.cswatch.active,.cswatch:hover{border-color:var(--acc);transform:scale(1.12)}
+.toggle-row{display:flex;gap:6px}
+.toggle-btn{
+  flex:1;padding:7px 4px;background:var(--s3);border:1px solid var(--b1);
+  border-radius:var(--r);font-size:10px;font-weight:700;letter-spacing:.05em;
+  color:var(--txt3);cursor:pointer;text-align:center;transition:all .15s;
+  font-family:var(--ui);
+}
+.toggle-btn.active{background:rgba(200,255,87,.1);border-color:var(--acc);color:var(--acc)}
+
+/* ── EXPORT PANEL ── */
+.export-summary{
+  background:var(--s3);border:1px solid var(--b1);border-radius:var(--r);
+  padding:12px;font-family:var(--mono);font-size:11px;color:var(--txt2);
+  line-height:2;
+}
+.export-summary strong{color:var(--txt)}
+
+/* ── BUTTONS ── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 18px;border:none;border-radius:var(--r);
+  cursor:pointer;font-family:var(--ui);font-size:12px;font-weight:700;
+  letter-spacing:.04em;transition:all .15s;white-space:nowrap;
+}
+.btn-acc{background:var(--acc);color:#000}
+.btn-acc:hover{background:#b8ef40;transform:translateY(-1px)}
+.btn-ghost{background:var(--s3);color:var(--txt2);border:1px solid var(--b1)}
+.btn-ghost:hover{border-color:var(--b2);color:var(--txt)}
+.btn-full{width:100%}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:6px;z-index:9999}
+.toast{
+  background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);
+  padding:11px 16px;font-family:var(--mono);font-size:11px;color:var(--txt);
+  display:flex;gap:10px;align-items:center;animation:tin .25s ease;max-width:300px;
+}
+.toast.ok{border-color:rgba(200,255,87,.4)}
+.toast.err{border-color:rgba(255,92,92,.4);color:var(--acc2)}
+@keyframes tin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+.seg-insert-btn{
+  text-align:center;font-family:var(--mono);font-size:10px;color:var(--txt3);
+  padding:4px;cursor:pointer;border:1px dashed var(--b1);border-radius:var(--r);
+  margin:0 2px;transition:all .15s;
+}
+.seg-insert-btn:hover{color:var(--acc);border-color:var(--acc);background:rgba(200,255,87,.05)}
+.empty{text-align:center;color:var(--txt3);font-family:var(--mono);font-size:11px;padding:24px 0}
+</style>
+</head>
+<body>
+<div style="display:flex;flex-direction:column;height:100vh">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Video<em>Studio</em><span class="logo-badge">LOCAL</span></div>
+  <div class="top-spacer"></div>
+  <div class="top-file" id="topFile">Nenhum arquivo carregado</div>
+</div>
+
+<!-- STEP NAV -->
+<div id="steps">
+  <div class="step active" data-step="1" onclick="goStep(1)">
+    <div class="step-num">1</div>Upload
+  </div>
+  <div class="step" data-step="2" onclick="goStep(2)">
+    <div class="step-num">2</div>Transcrição
+  </div>
+  <div class="step" data-step="3" onclick="goStep(3)">
+    <div class="step-num">3</div>Editor &amp; Estilo
+  </div>
+  <div class="step" data-step="4" onclick="goStep(4)">
+    <div class="step-num">4</div>Exportar
+  </div>
+</div>
+
+<!-- PANELS -->
+<div id="layout" style="flex:1;min-height:0;overflow:hidden">
+
+  <!-- ══ STEP 1: UPLOAD ══ -->
+  <div class="panel active" id="step1">
+    <input type="file" id="fileInput" accept="video/*" style="display:none"/>
+    <div class="upload-box" id="dropBox" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">🎬</div>
+      <div class="upload-title">Solte seu vídeo aqui</div>
+      <div class="upload-sub">ou clique para selecionar</div>
+      <div class="upload-hint">MP4 · MOV · AVI · MKV · WEBM · FLV · M4V — até 4GB</div>
+      <button class="upload-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Escolher arquivo</button>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2–4: EDITOR LAYOUT ══ -->
+  <div class="panel" id="step-editor" style="flex-direction:row">
+  <div id="editor-layout">
+
+    <!-- LEFT: video + timeline -->
+    <div id="left-col">
+      <div id="video-wrap">
+        <video id="videoEl" preload="metadata"></video>
+        <div id="sub-preview"><div id="sub-preview-text" style="display:none"></div></div>
+      </div>
+
+      <!-- playbar -->
+      <div id="playbar">
+        <button class="play-btn" id="playBtn">▶</button>
+        <span id="time-disp" style="font-family:var(--mono);font-size:11px;color:var(--txt2)">0:00 / 0:00</span>
+        <input type="range" id="seekBar" min="0" max="1000" value="0" step="1"
+          style="flex:1;-webkit-appearance:none;height:4px;background:var(--s4);border-radius:2px;outline:none;cursor:pointer"/>
+        <div id="vol-wrap">
+          🔊 <input type="range" class="range-sm" id="volBar" min="0" max="1" step="0.05" value="1"/>
+        </div>
+      </div>
+
+      <!-- timeline -->
+      <div id="timeline-wrap">
+        <div id="tl-header">
+          <span>Timeline</span>
+          <button class="tl-zoom" onclick="tlZoom(1.5)">＋</button>
+          <button class="tl-zoom" onclick="tlZoom(1/1.5)">－</button>
+          <button class="tl-zoom" onclick="tlFit()">Fit</button>
+          <span style="flex:1"></span>
+          <span id="tl-info" style="font-family:var(--mono);font-size:9px;color:var(--txt3)"></span>
+        </div>
+        <div id="timeline-scroll" onmousedown="tlMousedown(event)" onmousemove="tlMousemove(event)" onmouseup="tlMouseup(event)" onclick="tlClick(event)">
+          <div id="timeline-canvas-wrap">
+            <canvas id="waveCanvas"></canvas>
+            <canvas id="segCanvas"></canvas>
+            <div id="playhead"></div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /left-col -->
+
+    <!-- RIGHT: sidebar -->
+    <div id="right-col">
+      <div class="sidebar-tabs">
+        <button class="stab active" data-stab="transcribe" onclick="showStab('transcribe')">Legendas</button>
+        <button class="stab" data-stab="style" onclick="showStab('style')">Estilo</button>
+        <button class="stab" data-stab="export" onclick="showStab('export')">Exportar</button>
+      </div>
+
+      <!-- TRANSCRIBE TAB -->
+      <div class="stab-body active" id="stab-transcribe">
+        <div class="tlang">
+          <label>Idioma do vídeo</label>
+          <select id="langSel">
+            <option value="auto">Auto detectar</option>
+            <option value="pt" selected>Português</option>
+            <option value="en">Inglês</option>
+            <option value="es">Espanhol</option>
+            <option value="fr">Francês</option>
+            <option value="de">Alemão</option>
+            <option value="ja">Japonês</option>
+            <option value="zh">Chinês</option>
+          </select>
+        </div>
+        <button class="btn btn-acc btn-full" id="transcribeBtn">🎙 Transcrever</button>
+
+        <div id="transcProg" class="hidden prog-wrap">
+          <div class="prog-lbl" id="transcLbl">Iniciando...</div>
+          <div class="prog-bg"><div class="prog-fill" id="transcFill" style="width:0%"></div></div>
+        </div>
+
+        <hr class="divider"/>
+
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="sec-label" id="segCountLbl">Segmentos</div>
+          <button class="btn btn-ghost" id="addSegBtn" onclick="addSegment()" style="padding:5px 10px;font-size:10px;display:none">+ Novo</button>
+        </div>
+        <div class="empty" id="segsEmpty">Transcreva o vídeo para ver os segmentos aqui.</div>
+        <div id="seg-list"></div>
+      </div>
+
+      <!-- STYLE TAB -->
+      <div class="stab-body" id="stab-style">
+
+        <!-- Presets salvos -->
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="sec-label">Presets salvos</div>
+          <button class="btn btn-ghost" onclick="savePreset()" style="padding:4px 10px;font-size:10px">💾 Salvar atual</button>
+        </div>
+        <div id="savedPresetsList" style="display:flex;flex-direction:column;gap:4px">
+          <div class="empty" id="noSavedPresets" style="padding:8px 0">Nenhum preset salvo.</div>
+        </div>
+
+        <hr class="divider"/>
+        <div class="sec-label">Tipografia</div>
+
+        <div class="row">
+          <div class="field">
+            <label>Fonte</label>
+            <select id="cFontname">
+              <option value="Arial">Arial</option>
+              <option value="Arial Black">Arial Black</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Impact">Impact</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Trebuchet MS">Trebuchet MS</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Courier New">Courier New</option>
+              <option value="DejaVu Sans">DejaVu Sans</option>
+              <option value="Liberation Sans">Liberation Sans</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tamanho</label>
+            <input type="number" id="cFontSize" value="22" min="8" max="120"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Cor do texto</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="color" id="cColor" value="#ffffff"
+              style="width:40px;height:32px;padding:2px;border:1px solid var(--b1);background:var(--s3);border-radius:var(--r);cursor:pointer"/>
+            <div class="color-swatches" id="colorSwatches">
+              <div class="cswatch" data-hex="#ffffff" style="background:#fff" title="Branco"></div>
+              <div class="cswatch" data-hex="#ffe44d" style="background:#ffe44d" title="Amarelo"></div>
+              <div class="cswatch" data-hex="#c8ff57" style="background:#c8ff57" title="Verde"></div>
+              <div class="cswatch" data-hex="#5cc8ff" style="background:#5cc8ff" title="Ciano"></div>
+              <div class="cswatch" data-hex="#ffb347" style="background:#ffb347" title="Laranja"></div>
+              <div class="cswatch" data-hex="#ff5c5c" style="background:#ff5c5c" title="Vermelho"></div>
+              <div class="cswatch" data-hex="#111111" style="background:#111;border:1px solid #444" title="Preto"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Estilo</label>
+          <div class="toggle-row">
+            <div class="toggle-btn" id="togBold"   onclick="toggleStyle('bold')">Bold</div>
+            <div class="toggle-btn" id="togItalic" onclick="toggleStyle('italic')">Itálico</div>
+          </div>
+        </div>
+
+        <hr class="divider"/>
+        <div class="sec-label">Posição &amp; Layout</div>
+
+        <div class="field">
+  <label>Posição da legenda</label>
+  <div id="alignPad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:240px">
+    <!-- será preenchido pelo JS com apenas as 3 posições inferiores -->
+  </div>
+</div>
+
+        <div class="row">
+          <div class="field">
+            <label>Margem vertical (px)</label>
+            <input type="number" id="cMarginV" value="30" min="0" max="500"/>
+          </div>
+          <div class="field">
+            <label>Margem horizontal (px)</label>
+            <input type="number" id="cMarginH" value="20" min="0" max="500"/>
+          </div>
+        </div>
+
+        <hr class="divider"/>
+        <div class="sec-label">Fundo &amp; Contorno</div>
+
+        <div class="row">
+          <div class="field">
+            <label>Contorno (px)</label>
+            <input type="number" id="cOutline" value="2" min="0" max="10" step="0.5"/>
+          </div>
+          <div class="field">
+            <label>Sombra (px)</label>
+            <input type="number" id="cShadow" value="1" min="0" max="5" step="0.5"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Fundo</label>
+          <div class="toggle-row">
+            <div class="toggle-btn active" id="bgOutline" onclick="selectBg('outline')">Contorno</div>
+            <div class="toggle-btn" id="bgBox"     onclick="selectBg('box')">Caixa opaca</div>
+            <div class="toggle-btn" id="bgNone"    onclick="selectBg('none')">Nenhum</div>
+          </div>
+        </div>
+
+        <div class="field" id="boxAlphaWrap" style="display:none">
+          <label>Opacidade da caixa: <span id="boxAlphaVal">50</span>%</label>
+          <input type="range" id="cBoxAlpha" min="0" max="100" value="50"
+            style="width:100%;-webkit-appearance:none;height:4px;background:var(--s4);border-radius:2px;outline:none;cursor:pointer"/>
+        </div>
+
+        <hr class="divider"/>
+        <div class="sec-label">Preview</div>
+        <div class="preview-box"><div id="style-preview-text">Texto de exemplo</div></div>
+
+        <!-- Margens de posicionamento no preview (apenas visual, não exportado) -->
+
+      </div>
+
+      <!-- EXPORT TAB -->
+      <div class="stab-body" id="stab-export">
+        <div class="sec-label">Qualidade</div>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <div class="toggle-btn" id="qual-rapido" onclick="selectQuality('rapido')">Rápido</div>
+          <div class="toggle-btn active" id="qual-bom" onclick="selectQuality('bom')">Bom</div>
+          <div class="toggle-btn" id="qual-maximo" onclick="selectQuality('maximo')">Máximo</div>
+        </div>
+
+        <hr class="divider"/>
+        <div class="sec-label">Resumo</div>
+        <div class="export-summary" id="exportSummary">—</div>
+
+        <button class="btn btn-acc btn-full" id="exportBtn">⬇ Exportar vídeo</button>
+
+        <div id="exportProg" class="hidden prog-wrap">
+          <div class="prog-lbl" id="exportLbl">Processando...</div>
+          <div class="prog-bg"><div class="prog-fill" id="exportFill" style="width:0%"></div></div>
+        </div>
+
+        <div id="dlSection" class="hidden">
+          <a id="dlLink" class="btn btn-ghost btn-full" style="text-decoration:none">📥 Baixar vídeo exportado</a>
+        </div>
+
+        <hr class="divider"/>
+        <button class="btn btn-ghost btn-full" onclick="newVideo()" style="margin-top:4px">↩ Novo vídeo</button>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /editor-layout -->
+  </div><!-- /step-editor -->
+
+</div><!-- /layout -->
+</div><!-- /app -->
+
+<div id="toasts"></div>
+
+<!-- seekbar thumb style -->
+<style>
+#seekBar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--acc);border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(200,255,87,.5)}
+</style>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════
+const S = {
+  filename: null,
+  info: null,
+  waveform: [],
+  segments: [],
+  selectedSeg: null,
+  // ── Estilo direto (o que você vê = o que é exportado) ──
+  style: {
+    fontname:     'Arial',
+    fontsize:     22,
+    color:        '#ffffff',
+    bold:         false,
+    italic:       false,
+    alignment:    2,       // ASS numpad: 2=rodapé centro
+    margin_v:     30,
+    margin_h:     20,
+    outline_size: 2,
+    shadow:       1,
+    border_style: 1,       // 1=contorno, 3=caixa, 0=nenhum
+    back_alpha:   128,     // 0=opaco, 255=transparente
+  },
+  tlPxPerSec: 60,
+  dragging: null,
+  transcJobId: null,
+  exportJobId: null,
+  currentStep: 1,
+  history: [],
+  future: [],
+};
+
+// ── Undo/Redo helpers ─────────────────────────────────────────────
+function saveHistory() {
+  S.history.push(JSON.stringify(S.segments));
+  if (S.history.length > 60) S.history.shift();
+  S.future = [];
+}
+
+function undo() {
+  if (!S.history.length) return toast('Nada para desfazer.','');
+  S.future.push(JSON.stringify(S.segments));
+  S.segments = JSON.parse(S.history.pop());
+  renderSegList(); drawSegments();
+}
+
+function redo() {
+  if (!S.future.length) return toast('Nada para refazer.','');
+  S.history.push(JSON.stringify(S.segments));
+  S.segments = JSON.parse(S.future.pop());
+  renderSegList(); drawSegments();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  initStyleControls();
+  renderSavedPresets();
+  updateStylePreview();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// STEP NAV
+// ══════════════════════════════════════════════════════════════════
+function goStep(n) {
+  if (n > 1 && !S.filename) return toast('Carregue um vídeo primeiro.','err');
+  S.currentStep = n;
+  document.querySelectorAll('.step').forEach(s => {
+    const sn = +s.dataset.step;
+    s.classList.toggle('active', sn === n);
+    s.classList.toggle('done', sn < n);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (n === 1) document.getElementById('step1').classList.add('active');
+  else { document.getElementById('step-editor').classList.add('active'); }
+  if (n === 2) showStab('transcribe');
+  if (n === 3) showStab('style');
+  if (n === 4) { showStab('export'); updateExportSummary(); }
+}
+
+function showStab(name) {
+  document.querySelectorAll('.stab').forEach(t => t.classList.toggle('active', t.dataset.stab === name));
+  document.querySelectorAll('.stab-body').forEach(b => b.classList.toggle('active', b.id === 'stab-' + name));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UPLOAD
+// ══════════════════════════════════════════════════════════════════
+const fileInput = document.getElementById('fileInput');
+const dropBox   = document.getElementById('dropBox');
+
+fileInput.addEventListener('change', e => e.target.files[0] && doUpload(e.target.files[0]));
+dropBox.addEventListener('dragover',  e => { e.preventDefault(); dropBox.classList.add('drag'); });
+dropBox.addEventListener('dragleave', () => dropBox.classList.remove('drag'));
+dropBox.addEventListener('drop', e => {
+  e.preventDefault(); dropBox.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f?.type.startsWith('video/')) doUpload(f);
+  else toast('Arquivo não suportado.','err');
+});
+
+async function doUpload(file) {
+  toast('Enviando...'); 
+  const fd = new FormData(); fd.append('video', file);
+  try {
+    const r = await fetch('/api/upload', { method:'POST', body:fd });
+    const d = await r.json();
+    if (d.error) return toast(d.error,'err');
+    S.filename = d.filename; S.info = d.info; S.waveform = d.waveform || [];
+    S.segments = []; S.selectedSeg = null;
+    document.getElementById('videoEl').src = '/uploads/' + d.filename;
+    document.getElementById('topFile').textContent = file.name;
+    initTimeline();
+    toast('Vídeo carregado!','ok');
+    goStep(2);
+  } catch(e) { toast('Erro: '+e.message,'err'); }
+}
+
+function newVideo() {
+  S.filename = null; S.info = null; S.waveform = []; S.segments = [];
+  document.getElementById('videoEl').src = '';
+  document.getElementById('topFile').textContent = 'Nenhum arquivo carregado';
+  document.getElementById('seg-list').innerHTML = '';
+  document.getElementById('segsEmpty').classList.remove('hidden');
+  document.getElementById('addSegBtn').style.display = 'none';
+  document.getElementById('dlSection').classList.add('hidden');
+  document.getElementById('exportProg').classList.add('hidden');
+  goStep(1);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VIDEO PLAYER
+// ══════════════════════════════════════════════════════════════════
+const vid = document.getElementById('videoEl');
+const playBtn = document.getElementById('playBtn');
+const seekBar = document.getElementById('seekBar');
+const volBar  = document.getElementById('volBar');
+const timeDsp = document.getElementById('time-disp');
+
+playBtn.onclick = () => vid.paused ? vid.play() : vid.pause();
+vid.onplay  = () => { playBtn.textContent='⏸'; rafLoop(); };
+vid.onpause = () => playBtn.textContent = '▶';
+vid.onended = () => playBtn.textContent = '▶';
+seekBar.oninput = () => { vid.currentTime = (seekBar.value/1000) * (vid.duration||0); };
+volBar.oninput  = () => vid.volume = volBar.value;
+
+// Quando o vídeo carrega e as dimensões reais ficam disponíveis,
+// força re-render do overlay para que getBoundingClientRect() seja preciso.
+vid.addEventListener('loadedmetadata', () => {
+  // Aguarda um frame para o browser calcular o layout
+  requestAnimationFrame(() => {
+    updateSubPreview(vid.currentTime);
+    updateStylePreview();
+  });
+});
+
+// ResizeObserver: re-calcula se o wrapper mudar de tamanho (ex: resize da janela)
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => {
+    updateSubPreview(vid.currentTime);
+  });
+  ro.observe(document.getElementById('video-wrap'));
+}
+
+function rafLoop() {
+  if (vid.paused) return;
+  updatePlayer();
+  requestAnimationFrame(rafLoop);
+}
+
+vid.ontimeupdate = updatePlayer;
+
+function updatePlayer() {
+  const t = vid.currentTime, d = vid.duration||1;
+  seekBar.value = (t/d)*1000;
+  timeDsp.textContent = `${fmt(t)} / ${fmt(d)}`;
+  updatePlayhead(t);
+  updateSubPreview(t);
+}
+
+function fmt(s) {
+  if (!s||isNaN(s)) return '0:00';
+  return `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// TIMELINE
+// ══════════════════════════════════════════════════════════════════
+let TL = { W:0, H:80, scrollEl:null, wrapEl:null, waveC:null, segC:null };
+
+function initTimeline() {
+  TL.scrollEl = document.getElementById('timeline-scroll');
+  TL.wrapEl   = document.getElementById('timeline-canvas-wrap');
+  TL.waveC    = document.getElementById('waveCanvas');
+  TL.segC     = document.getElementById('segCanvas');
+  tlFit();
+}
+
+function tlWidth() {
+  return Math.max(TL.scrollEl?.clientWidth||800, (S.info?.duration||60)*S.tlPxPerSec);
+}
+
+function tlFit() {
+  if (!S.info) return;
+  const sw = document.getElementById('timeline-scroll')?.clientWidth || 800;
+  S.tlPxPerSec = sw / (S.info.duration || 60);
+  tlRedraw();
+}
+
+function tlZoom(factor) {
+  const dur = S.info?.duration || 60;
+  const maxPxPerSec = Math.floor(16000 / dur);
+  S.tlPxPerSec = Math.max(10, Math.min(maxPxPerSec, S.tlPxPerSec * factor));
+  tlRedraw();
+}
+
+function tlRedraw() {
+  if (!TL.scrollEl) return;
+  const dur = S.info?.duration || 60;
+  const MAX_CANVAS_W = 16000; // limite seguro para evitar Out of Memory
+  const W = Math.min(MAX_CANVAS_W, Math.max(TL.scrollEl.clientWidth, dur * S.tlPxPerSec));
+  const H = TL.scrollEl.clientHeight || 80;
+  TL.W = W; TL.H = H;
+  TL.wrapEl.style.width  = W + 'px';
+  TL.wrapEl.style.height = H + 'px';
+
+  for (const c of [TL.waveC, TL.segC]) {
+    c.width = W; c.height = H;
+    c.style.width  = W + 'px';
+    c.style.height = H + 'px';
+  }
+  drawWaveform(); drawSegments();
+  updatePlayhead(vid.currentTime);
+  document.getElementById('tl-info').textContent =
+    `${Math.round(S.tlPxPerSec)}px/s · ${S.segments.length} segs`;
+}
+
+function drawWaveform() {
+  const ctx = TL.waveC.getContext('2d');
+  const {W,H} = TL;
+  ctx.clearRect(0,0,W,H);
+
+  const wf = S.waveform;
+  if (!wf.length) {
+    // draw flat line
+    ctx.strokeStyle = '#2a2a38';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+    return;
+  }
+
+  // background
+  ctx.fillStyle = '#0e0e14';
+  ctx.fillRect(0,0,W,H);
+
+  // ruler ticks
+  ctx.fillStyle = '#1e1e28';
+  const dur = S.info?.duration || 60;
+  const step = tickStep(dur);
+  for (let t=0; t<=dur; t+=step) {
+    const x = t * S.tlPxPerSec;
+    ctx.fillRect(x,0,1,H);
+    ctx.fillStyle='#44445a';
+    ctx.font='9px JetBrains Mono,monospace';
+    ctx.fillText(fmt(t), x+3, 10);
+    ctx.fillStyle='#1e1e28';
+  }
+
+  // waveform bars
+  const midY = H/2;
+  const pts = wf.length;
+  const barW = W/pts;
+
+  for (let i=0;i<pts;i++) {
+    const amp = wf[i]*0.9;
+    const bh  = Math.max(1, amp*(H*0.42));
+    const x   = i*barW;
+    const alpha = 0.35 + amp*0.65;
+    ctx.fillStyle = `rgba(100,120,200,${alpha})`;
+    ctx.fillRect(x, midY-bh, barW*0.7, bh*2);
+  }
+}
+
+function tickStep(dur) {
+  if (dur<30) return 1;
+  if (dur<120) return 5;
+  if (dur<600) return 10;
+  if (dur<1800) return 30;
+  return 60;
+}
+
+function drawSegments() {
+  const ctx = TL.segC.getContext('2d');
+  const {W,H} = TL;
+  ctx.clearRect(0,0,W,H);
+
+  const segH = 36, segY = H - segH - 4;
+
+  S.segments.forEach(seg => {
+    const x1 = seg.start * S.tlPxPerSec;
+    const x2 = seg.end   * S.tlPxPerSec;
+    const w  = Math.max(4, x2 - x1);
+    const isActive = S.selectedSeg === seg.id;
+
+    // body
+    ctx.fillStyle = isActive ? 'rgba(200,255,87,0.22)' : 'rgba(92,200,255,0.13)';
+    ctx.fillRect(x1, segY, w, segH);
+
+    // border
+    ctx.strokeStyle = isActive ? '#c8ff57' : '#5cc8ff';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.strokeRect(x1+.5, segY+.5, w-1, segH-1);
+
+    // text
+    ctx.fillStyle = isActive ? '#c8ff57' : '#9999b8';
+    ctx.font = '10px JetBrains Mono,monospace';
+    ctx.save();
+    ctx.rect(x1+4, segY, w-8, segH);
+    ctx.clip();
+    ctx.fillText(seg.text.slice(0,40), x1+4, segY+14);
+    ctx.restore();
+
+    // handles
+    const hCol = isActive ? '#c8ff57' : '#5cc8ff';
+    ctx.fillStyle = hCol;
+    ctx.fillRect(x1, segY, 4, segH);      // left handle
+    ctx.fillRect(x2-4, segY, 4, segH);    // right handle
+  });
+}
+
+function updatePlayhead(t) {
+  const ph = document.getElementById('playhead');
+  if (!ph) return;
+  const x = t * S.tlPxPerSec;
+  ph.style.left = x + 'px';
+  // auto-scroll
+  const sc = document.getElementById('timeline-scroll');
+  if (sc && !S.dragging) {
+    const sw = sc.clientWidth;
+    const sl = sc.scrollLeft;
+    if (x < sl || x > sl + sw - 40) sc.scrollLeft = x - sw/2;
+  }
+}
+
+// ── timeline interaction ──────────────────────────────────────────
+function tlXToTime(e) {
+  const sc = document.getElementById('timeline-scroll');
+  const rect = sc.getBoundingClientRect();
+  return (e.clientX - rect.left + sc.scrollLeft) / S.tlPxPerSec;
+}
+
+const HANDLE_PX = 8;
+
+function tlMousedown(e) {
+  if (e.button !== 0) return;
+  const t = tlXToTime(e);
+  const segH = 36, segY = TL.H - segH - 4;
+  const sc = document.getElementById('timeline-scroll');
+  const rect = sc.getBoundingClientRect();
+  const my = e.clientY - rect.top;
+  if (my < segY || my > segY + segH) return; // not in seg lane
+
+  for (const seg of S.segments) {
+    const x1 = seg.start * S.tlPxPerSec;
+    const x2 = seg.end   * S.tlPxPerSec;
+    const tx  = t * S.tlPxPerSec;
+
+    if (Math.abs(tx - x1) < HANDLE_PX) {
+      S.dragging = { segId:seg.id, edge:'start', startX:e.clientX, origStart:seg.start, origEnd:seg.end };
+      e.preventDefault(); return;
+    }
+    if (Math.abs(tx - x2) < HANDLE_PX) {
+      S.dragging = { segId:seg.id, edge:'end', startX:e.clientX, origStart:seg.start, origEnd:seg.end };
+      e.preventDefault(); return;
+    }
+    if (tx >= x1 && tx <= x2) {
+      S.selectedSeg = seg.id; selectSegInList(seg.id);
+      S.dragging = { segId:seg.id, edge:'move', startX:e.clientX, origStart:seg.start, origEnd:seg.end };
+      e.preventDefault(); drawSegments(); return;
+    }
+  }
+}
+
+function tlMousemove(e) {
+  if (!S.dragging) return;
+  const dx   = (e.clientX - S.dragging.startX) / S.tlPxPerSec;
+  const seg  = S.segments.find(s => s.id === S.dragging.segId);
+  if (!seg) return;
+  const dur  = S.info?.duration || 9999;
+
+  if (S.dragging.edge === 'start') {
+    seg.start = Math.max(0, Math.min(seg.end - 0.1, S.dragging.origStart + dx));
+  } else if (S.dragging.edge === 'end') {
+    seg.end = Math.max(seg.start + 0.1, Math.min(dur, S.dragging.origEnd + dx));
+  } else {
+    const len = S.dragging.origEnd - S.dragging.origStart;
+    seg.start = Math.max(0, Math.min(dur - len, S.dragging.origStart + dx));
+    seg.end   = seg.start + len;
+  }
+  seg.start = round2(seg.start); seg.end = round2(seg.end);
+  drawSegments();
+  updateSegItemTimes(seg);
+}
+
+function tlMouseup() {
+  if (S.dragging) saveHistory();
+  S.dragging = null;
+}
+
+function tlClick(e) {
+  if (S.dragging) return;
+  const t = tlXToTime(e);
+  const sc = document.getElementById('timeline-scroll');
+  const rect = sc.getBoundingClientRect();
+  const my = e.clientY - rect.top;
+  const segH = 36, segY = TL.H - segH - 4;
+  if (my >= segY) return; // clicked on seg lane, handled by mousedown
+  vid.currentTime = Math.max(0, Math.min(S.info?.duration||0, t));
+}
+
+function round2(n) { return Math.round(n*100)/100; }
+
+// ══════════════════════════════════════════════════════════════════
+// SEGMENT LIST (sidebar)
+// ══════════════════════════════════════════════════════════════════
+function renderSegList() {
+  const list = document.getElementById('seg-list');
+  const empty = document.getElementById('segsEmpty');
+  document.getElementById('addSegBtn').style.display = S.segments.length ? '' : 'none';
+  document.getElementById('segCountLbl').textContent = `Segmentos (${S.segments.length})`;
+
+  if (!S.segments.length) { empty.classList.remove('hidden'); list.innerHTML=''; return; }
+  empty.classList.add('hidden');
+
+  list.innerHTML = S.segments.map((s, idx) => {
+    const next = S.segments[idx + 1];
+    const gap = next ? round2(next.start - s.end) : null;
+    const canInsert = gap !== null && gap >= 0.2;
+    return `
+    <div class="seg-item" id="si-${s.id}" onclick="selectSeg(${s.id})">
+      <div class="seg-time">
+        <input type="number" value="${s.start}" step="0.1" min="0" title="Início"
+          onchange="updateSegTime(${s.id},'start',this.value)" onclick="event.stopPropagation()"/>
+        <span style="color:var(--txt3)">→</span>
+        <input type="number" value="${s.end}" step="0.1" min="0" title="Fim"
+          onchange="updateSegTime(${s.id},'end',this.value)" onclick="event.stopPropagation()"/>
+      </div>
+      <textarea class="seg-txt" rows="2"
+        onchange="updateSegText(${s.id},this.value)"
+        onclick="event.stopPropagation()">${esc(s.text)}</textarea>
+      <button class="seg-del" onclick="deleteSeg(${s.id});event.stopPropagation()">✕</button>
+    </div>
+    ${canInsert ? `<div class="seg-insert-btn" onclick="insertSegBetween(${idx})" title="Inserir legenda aqui">＋ inserir (${gap}s)</div>` : ''}
+  `}).join('');
+}
+
+function selectSeg(id) {
+  S.selectedSeg = id;
+  document.querySelectorAll('.seg-item').forEach(el => {
+    el.classList.toggle('active', el.id === 'si-'+id);
+  });
+  drawSegments();
+  const seg = S.segments.find(s => s.id === id);
+  if (seg) vid.currentTime = seg.start;
+}
+
+function selectSegInList(id) {
+  document.querySelectorAll('.seg-item').forEach(el => {
+    el.classList.toggle('active', el.id === 'si-'+id);
+  });
+  const el = document.getElementById('si-'+id);
+  if (el) el.scrollIntoView({block:'nearest'});
+}
+
+function updateSegTime(id, edge, val) {
+  saveHistory();
+  const seg = S.segments.find(s => s.id === id);
+  if (!seg) return;
+  seg[edge] = Math.max(0, parseFloat(val)||0);
+  drawSegments();
+  updateSegItemTimes(seg);
+}
+
+function updateSegText(id, text) {
+  const seg = S.segments.find(s => s.id === id);
+  if (seg) seg.text = text;
+}
+
+function updateSegItemTimes(seg) {
+  const el = document.getElementById('si-'+seg.id);
+  if (!el) return;
+  const inputs = el.querySelectorAll('input[type=number]');
+  if (inputs[0]) inputs[0].value = seg.start;
+  if (inputs[1]) inputs[1].value = seg.end;
+}
+
+function deleteSeg(id) {
+  saveHistory();
+  S.segments = S.segments.filter(s => s.id !== id);
+  if (S.selectedSeg === id) S.selectedSeg = null;
+  renderSegList(); drawSegments();
+}
+
+function insertSegBetween(idx) {
+  const a = S.segments[idx];
+  const b = S.segments[idx + 1];
+  if (!a || !b) return;
+  saveHistory();
+  const start = round2(a.end + 0.05);
+  const end   = round2(b.start - 0.05);
+  const newSeg = { id: Date.now(), start, end, text: 'Nova legenda' };
+  S.segments.splice(idx + 1, 0, newSeg);
+  renderSegList(); drawSegments();
+  selectSeg(newSeg.id);
+}
+
+function addSegment() {
+  saveHistory();
+  const lastEnd = S.segments.length ? S.segments[S.segments.length-1].end : 0;
+  const dur = S.info?.duration || 60;
+  const newSeg = {
+    id: Date.now(),
+    start: round2(Math.min(lastEnd, dur-1)),
+    end:   round2(Math.min(lastEnd+2, dur)),
+    text:  'Novo segmento'
+  };
+  S.segments.push(newSeg);
+  renderSegList(); drawSegments();
+  selectSeg(newSeg.id);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// TRANSCRIBE
+// ══════════════════════════════════════════════════════════════════
+document.getElementById('transcribeBtn').onclick = async () => {
+  if (!S.filename) return;
+  document.getElementById('transcribeBtn').disabled = true;
+  document.getElementById('transcProg').classList.remove('hidden');
+  setP('transc', 0, 'Extraindo áudio...');
+  S.segments = [];
+  renderSegList(); drawSegments();
+
+  const r = await fetch('/api/transcribe', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({filename:S.filename, language:document.getElementById('langSel').value})
+  });
+  const d = await r.json();
+  if (d.error) { toast(d.error,'err'); document.getElementById('transcribeBtn').disabled=false; return; }
+  S.transcJobId = d.job_id;
+  pollJob(d.job_id, 'transc', job => {
+    S.segments = job.segments || [];
+    renderSegList(); drawSegments();
+    document.getElementById('transcribeBtn').disabled=false;
+    toast(`${S.segments.length} segmentos transcritos!`,'ok');
+    goStep(3);
+  });
+};
+
+// ══════════════════════════════════════════════════════════════════
+// STYLE — estado direto (sem preset abstrato)
+// S.style = { fontname, fontsize, color, bold, italic,
+//             alignment, margin_v, margin_h,
+//             outline_size, shadow, border_style, back_alpha }
+// ══════════════════════════════════════════════════════════════════
+
+// Alinhamento ASS numpad: posição no grid 3×3
+// layout visual (ordem do grid, linha a linha de cima pra baixo):
+// 7 8 9 / 4 5 6 / 1 2 3
+const ALIGN_GRID = [7,8,9, 4,5,6, 1,2,3];
+// Para o overlay no vídeo: alignment → {h, v}
+const ALIGN_POS = {
+  1:{h:'left',  v:'bottom'}, 2:{h:'center',v:'bottom'}, 3:{h:'right', v:'bottom'},
+  4:{h:'left',  v:'middle'}, 5:{h:'center',v:'middle'}, 6:{h:'right', v:'middle'},
+  7:{h:'left',  v:'top'},    8:{h:'center',v:'top'},    9:{h:'right', v:'top'},
+};
+
+function initStyleControls() {
+  // Numpad de alinhamento
+  const pad = document.getElementById('alignPad');
+  pad.innerHTML = `
+    <div class="toggle-btn align-pad-btn${S.style.alignment===1?' active':''}" 
+         data-align="1" onclick="setAlignment(1)" 
+         style="padding:10px 0;text-align:center;font-size:12px;">◀ Esquerda inferior</div>
+    <div class="toggle-btn align-pad-btn${S.style.alignment===2?' active':''}" 
+         data-align="2" onclick="setAlignment(2)" 
+         style="padding:10px 0;text-align:center;font-size:12px;">▼ Centro inferior</div>
+    <div class="toggle-btn align-pad-btn${S.style.alignment===3?' active':''}" 
+         data-align="3" onclick="setAlignment(3)" 
+         style="padding:10px 0;text-align:center;font-size:12px;">▶ Direita inferior</div>
+  `;
+
+  // Color swatches
+  document.querySelectorAll('.cswatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+      document.getElementById('cColor').value = sw.dataset.hex;
+      S.style.color = sw.dataset.hex;
+      syncFromState(); updateStylePreview();
+    });
+  });
+
+  // Color picker direto
+  document.getElementById('cColor').addEventListener('input', e => {
+    S.style.color = e.target.value;
+    updateStylePreview();
+  });
+
+  // Inputs numéricos e selects
+  const numMap = {
+    cFontSize:'fontsize', cMarginV:'margin_v', cMarginH:'margin_h',
+    cOutline:'outline_size', cShadow:'shadow'
+  };
+  Object.entries(numMap).forEach(([id, key]) => {
+    document.getElementById(id).addEventListener('input', e => {
+      S.style[key] = parseFloat(e.target.value) || 0;
+      updateStylePreview();
+    });
+  });
+
+  document.getElementById('cFontname').addEventListener('change', e => {
+    S.style.fontname = e.target.value;
+    updateStylePreview();
+  });
+
+  // Box alpha slider
+  document.getElementById('cBoxAlpha').addEventListener('input', e => {
+    S.style.back_alpha = Math.round((1 - e.target.value/100) * 255);
+    document.getElementById('boxAlphaVal').textContent = e.target.value;
+    updateStylePreview();
+  });
+
+  // Preview offset
+  ['pvOffsetX','pvOffsetY'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => updateStylePreview());
+  });
+
+  syncFromState();
+}
+
+function syncFromState() {
+  // Sincroniza inputs com S.style (ao carregar preset salvo, por ex)
+  const s = S.style;
+  document.getElementById('cFontname').value  = s.fontname    || 'Arial';
+  document.getElementById('cFontSize').value  = s.fontsize    || 22;
+  document.getElementById('cMarginV').value   = s.margin_v    || 30;
+  document.getElementById('cMarginH').value   = s.margin_h    || 20;
+  document.getElementById('cOutline').value   = s.outline_size ?? 2;
+  document.getElementById('cShadow').value    = s.shadow       ?? 1;
+  document.getElementById('cColor').value     = s.color       || '#ffffff';
+  document.getElementById('togBold').classList.toggle('active', !!s.bold);
+  document.getElementById('togItalic').classList.toggle('active', !!s.italic);
+  // Numpad
+  document.querySelectorAll('.align-pad-btn').forEach(b =>
+    b.classList.toggle('active', +b.dataset.align === s.alignment));
+  // Bg mode
+  const bsMap = {1:'outline', 3:'box'};
+  const bgKey = s.border_style === 3 ? 'box' : s.border_style === 0 ? 'none' : 'outline';
+  selectBg(bgKey, true);
+  // Box alpha
+  const alphaSlider = document.getElementById('cBoxAlpha');
+  const pct = Math.round((1 - (s.back_alpha||128)/255) * 100);
+  alphaSlider.value = pct;
+  document.getElementById('boxAlphaVal').textContent = pct;
+}
+
+function setAlignment(n) {
+  S.style.alignment = n;
+  document.querySelectorAll('.align-pad-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.align === n);
+  });
+  updateStylePreview();
+}
+function toggleStyle(prop) {
+  S.style[prop] = !S.style[prop];
+  document.getElementById('tog'+prop.charAt(0).toUpperCase()+prop.slice(1))
+    .classList.toggle('active', S.style[prop]);
+  updateStylePreview();
+}
+
+function selectBg(mode, silent) {
+  ['outline','box','none'].forEach(m =>
+    document.getElementById('bg'+m.charAt(0).toUpperCase()+m.slice(1))
+      ?.classList.toggle('active', m === mode));
+  document.getElementById('boxAlphaWrap').style.display = mode === 'box' ? '' : 'none';
+  if (mode === 'outline') { S.style.border_style = 1; }
+  else if (mode === 'box') { S.style.border_style = 3; }
+  else { S.style.border_style = 0; S.style.outline_size = 0; S.style.shadow = 0; }
+  if (!silent) updateStylePreview();
+}
+
+// ── Presets salvos (localStorage) ────────────────────────────────
+function loadSavedPresets() {
+  try { return JSON.parse(localStorage.getItem('vs_presets') || '[]'); }
+  catch { return []; }
+}
+
+function persistPresets(list) {
+  localStorage.setItem('vs_presets', JSON.stringify(list));
+}
+
+function renderSavedPresets() {
+  const list = loadSavedPresets();
+  const el = document.getElementById('savedPresetsList');
+  const empty = document.getElementById('noSavedPresets');
+  if (!list.length) { empty.classList.remove('hidden'); el.querySelectorAll('.saved-preset').forEach(x=>x.remove()); return; }
+  empty.classList.add('hidden');
+  el.querySelectorAll('.saved-preset').forEach(x => x.remove());
+  list.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'saved-preset';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--s3);border:1px solid var(--b1);border-radius:var(--r);padding:6px 10px';
+    row.innerHTML = `
+      <span style="flex:1;font-family:var(--mono);font-size:11px;color:var(--txt2)">${esc(p.name)}</span>
+      <button onclick="applyPreset(${i})" style="background:none;border:none;color:var(--acc);font-size:10px;cursor:pointer;font-family:var(--ui)">Aplicar</button>
+      <button onclick="deletePreset(${i})" style="background:none;border:none;color:var(--txt3);font-size:12px;cursor:pointer">✕</button>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function savePreset() {
+  const name = prompt('Nome do preset:');
+  if (!name?.trim()) return;
+  const list = loadSavedPresets();
+  list.push({ name: name.trim(), style: { ...S.style } });
+  persistPresets(list);
+  renderSavedPresets();
+  toast('Preset salvo!', 'ok');
+}
+
+function applyPreset(i) {
+  const list = loadSavedPresets();
+  if (!list[i]) return;
+  S.style = { ...list[i].style };
+  syncFromState();
+  updateStylePreview();
+  toast(`Preset "${list[i].name}" aplicado.`, 'ok');
+}
+
+function deletePreset(i) {
+  const list = loadSavedPresets();
+  list.splice(i, 1);
+  persistPresets(list);
+  renderSavedPresets();
+}
+
+// ── Preview unificado ─────────────────────────────────────────────
+// getStyle() → retorna o estilo atual para AMBOS: overlay no vídeo e preview box
+function getStyle() { return S.style; }
+
+function updateStylePreview() {
+  const st  = getStyle();
+  const el  = document.getElementById('style-preview-text');
+  const box = document.querySelector('.preview-box');
+  // Escala a fonte proporcionalmente: ASS usa PlayResY=1080,
+  // o preview box tem ~60px de altura útil — mesma razão.
+  const boxH     = box ? box.clientHeight : 60;
+  const fontScaled = Math.max(8, Math.round((st.fontsize || 22) / 1080 * boxH));
+
+  el.style.fontFamily   = `'${st.fontname}', sans-serif`;
+  el.style.fontSize     = fontScaled + 'px';
+  el.style.color        = st.color || '#ffffff';
+  el.style.fontWeight   = st.bold   ? 'bold'   : 'normal';
+  el.style.fontStyle    = st.italic ? 'italic' : 'normal';
+  el.style.padding      = '4px 10px';
+  el.style.borderRadius = '3px';
+  if (st.border_style === 3) {
+    const a = ((255 - (st.back_alpha || 128)) / 255).toFixed(2);
+    el.style.background = `rgba(0,0,0,${a})`;
+    el.style.textShadow = 'none';
+  } else if (st.border_style === 0) {
+    el.style.background = 'transparent';
+    el.style.textShadow = 'none';
+  } else {
+    el.style.background = 'transparent';
+    const o = (st.outline_size || 2) * (fontScaled / (st.fontsize || 22));
+    el.style.textShadow =
+      `${o}px ${o}px 0 #000,-${o}px -${o}px 0 #000,` +
+      `${o}px -${o}px 0 #000,-${o}px ${o}px 0 #000`;
+  }
+  // Força re-render do overlay no vídeo se houver legenda visível
+  const ov = document.getElementById('sub-preview-text');
+  if (ov && ov.style.display !== 'none') applyOverlayStyle(ov);
+}
+
+// ====================== applyOverlayStyle (CONTORNO EXTERNO - VERSÃO FINAL) ======================
+function applyOverlayStyle(el) {
+  const st = getStyle();
+  const pos = ALIGN_POS[st.alignment] || ALIGN_POS[2];
+  const wrap = document.getElementById('video-wrap');
+  const vidEl = document.getElementById('videoEl');
+  if (!wrap || !vidEl) return;
+
+  const wrapRect = wrap.getBoundingClientRect();
+  const vidRect = vidEl.getBoundingClientRect();
+
+  const vidW = vidRect.width;
+  const vidH = vidRect.height;
+  const offsetLeft = vidRect.left - wrapRect.left;
+  const offsetTop  = vidRect.top  - wrapRect.top;
+
+  const marginH = Math.round((st.margin_h || 20) * (vidW / 1920));
+  const marginV = Math.round((st.margin_v || 30) * (vidH / 1080));
+  const fontSize = Math.round((st.fontsize || 22) / 1080 * vidH);
+
+  // Reset
+  el.style.position = 'absolute';
+  el.style.left = el.style.right = el.style.top = el.style.bottom = '';
+  el.style.transform = '';
+  el.style.maxWidth = (vidW - marginH * 2.4) + 'px';
+
+  // Posição (mantida igual)
+  if (pos.h === 'center') {
+    el.style.left = (offsetLeft + vidW / 2) + 'px';
+    el.style.transform = 'translateX(-50%)';
+    el.style.textAlign = 'center';
+  } else if (pos.h === 'left') {
+    el.style.left = (offsetLeft + marginH) + 'px';
+    el.style.textAlign = 'left';
+  } else {
+    el.style.right = (wrapRect.right - vidRect.right + marginH) + 'px';
+    el.style.textAlign = 'right';
+  }
+
+  if (pos.v === 'bottom') {
+    el.style.bottom = (wrapRect.bottom - vidRect.bottom + marginV) + 'px';
+  } else if (pos.v === 'top') {
+    el.style.top = (offsetTop + marginV) + 'px';
+  } else {
+    el.style.top = (offsetTop + vidH / 2) + 'px';
+    el.style.transform = (el.style.transform || '') + ' translateY(-50%)';
+  }
+
+  // Estilo base
+  el.style.fontFamily   = `'${st.fontname}', Arial, sans-serif`;
+  el.style.fontSize     = fontSize + 'px';
+  el.style.color        = st.color || '#ffffff';
+  el.style.fontWeight   = st.bold ? 'bold' : 'normal';
+  el.style.fontStyle    = st.italic ? 'italic' : 'normal';
+  el.style.lineHeight   = '1.35';
+  el.style.padding      = '5px 12px';
+  el.style.borderRadius = '4px';
+  el.style.whiteSpace   = 'pre-wrap';
+  el.style.wordBreak    = 'break-word';
+
+  // ====================== CONTORNO EXTERNO (o que você pediu) ======================
+  if (st.border_style === 3) {                    // Caixa opaca
+    const alpha = ((255 - (st.back_alpha || 128)) / 255).toFixed(2);
+    el.style.backgroundColor = `rgba(0,0,0,${alpha})`;
+    el.style.webkitTextStroke = 'none';
+    el.style.textShadow = 'none';
+    el.style.paintOrder = 'normal';
+  } 
+  else if (st.border_style === 0) {               // Nenhum
+    el.style.backgroundColor = 'transparent';
+    el.style.webkitTextStroke = 'none';
+    el.style.textShadow = 'none';
+    el.style.paintOrder = 'normal';
+  } 
+  else {                                          // Contorno externo (FORA da letra)
+    el.style.backgroundColor = 'transparent';
+
+    const baseOutline = st.outline_size || 2;
+    let outlinePx = baseOutline * (fontSize / (st.fontsize || 22));
+
+    // Ajuste inteligente para fontes pequenas (evita contorno interno)
+    if (fontSize < 30) outlinePx = Math.min(outlinePx, fontSize * 0.16);
+    else if (fontSize < 45) outlinePx = Math.min(outlinePx, fontSize * 0.19);
+
+    outlinePx = Math.max(0.8, Math.round(outlinePx));
+
+    // === TRUQUE PRINCIPAL: contorno externo ===
+    el.style.paintOrder = 'stroke fill';           // ← Isso desenha o contorno PRIMEIRO
+    el.style.webkitTextStroke = `${outlinePx}px #000`;
+    el.style.textShadow = 'none';
+  }
+}
+// ====================== updateSubPreview ======================
+function updateSubPreview(t) {
+  const el = document.getElementById('sub-preview-text');
+  const seg = S.segments.find(s => t >= s.start && t <= s.end + 0.1); // +0.1 para evitar flicker
+  if (seg) {
+    el.style.display = '';
+    el.textContent = seg.text;
+    applyOverlayStyle(el);
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════════════════
+function updateExportSummary() {
+  const s = S.style;
+  const lines = [
+    `<strong>Arquivo:</strong> ${S.filename||'—'}`,
+    `<strong>Segmentos:</strong> ${S.segments.length}`,
+    `<strong>Fonte:</strong> ${s.fontname||'Arial'} ${s.fontsize||22}px`,
+    `<strong>Cor:</strong> <span style="display:inline-block;width:10px;height:10px;background:${s.color||'#fff'};border:1px solid #555;vertical-align:middle;border-radius:2px"></span> ${s.color||'#fff'}`,
+    `<strong>Alinhamento:</strong> ${s.alignment||2}`,
+    `<strong>Margem:</strong> V=${s.margin_v||30}px H=${s.margin_h||20}px`,
+  ];
+  document.getElementById('exportSummary').innerHTML = lines.join('<br/>');
+}
+
+let currentQuality = 'bom';
+function selectQuality(q) {
+  currentQuality = q;
+  ['rapido','bom','maximo'].forEach(k =>
+    document.getElementById('qual-'+k)?.classList.toggle('active', k === q));
+}
+
+document.getElementById('exportBtn').onclick = async () => {
+  if (!S.filename) return;
+  if (!S.segments.length) return toast('Nenhum segmento de legenda.','err');
+  document.getElementById('exportBtn').disabled = true;
+  document.getElementById('exportProg').classList.remove('hidden');
+  document.getElementById('dlSection').classList.add('hidden');
+  setP('export', 0, 'Preparando...');
+
+  const r = await fetch('/api/export', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      filename: S.filename,
+      segments: S.segments,
+      style:    S.style,       // estilo direto — sem preset
+      quality:  currentQuality,
+    })
+  });
+  const d = await r.json();
+  if (d.error) { toast(d.error,'err'); document.getElementById('exportBtn').disabled=false; return; }
+  pollJob(d.job_id, 'export', job => {
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('dlLink').href     = `/api/download/${job.output_file}`;
+    document.getElementById('dlLink').download = job.output_file;
+    document.getElementById('dlSection').classList.remove('hidden');
+    toast('Exportado com sucesso!','ok');
+  });
+};
+
+// ══════════════════════════════════════════════════════════════════
+// JOB POLLING
+// ══════════════════════════════════════════════════════════════════
+function pollJob(jid, prefix, onDone) {
+  const iv = setInterval(async () => {
+    const r = await fetch('/api/job/'+jid);
+    const j = await r.json();
+    setP(prefix, j.progress, msgFor(j,prefix));
+    if (j.status==='done') { clearInterval(iv); onDone(j); }
+    if (j.status==='error') {
+      clearInterval(iv);
+      toast('Erro: '+(j.error||'desconhecido'),'err');
+      if (prefix==='transc') document.getElementById('transcribeBtn').disabled=false;
+      else document.getElementById('exportBtn').disabled=false;
+    }
+  }, 1200);
+}
+
+function msgFor(j, prefix) {
+  if (j.status==='queued') return 'Na fila...';
+  if (j.status==='done') return prefix==='transc' ? 'Transcrição concluída!' : 'Exportação concluída!';
+  return prefix==='transc'
+    ? ['Extraindo áudio...','Rodando Whisper...','Processando...','Finalizando...'][Math.floor(j.progress/25)]||'Processando...'
+    : `Exportando... ${j.progress}%`;
+}
+
+function setP(prefix, pct, lbl) {
+  document.getElementById(prefix+'Fill').style.width = pct+'%';
+  document.getElementById(prefix+'Lbl').textContent  = lbl;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════════
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function toast(msg, type='') {
+  const w = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast '+(type==='ok'?'ok':type==='err'?'err':'');
+  el.innerHTML = `<span>${type==='ok'?'✓':type==='err'?'✕':'ℹ'}</span><span>${msg}</span>`;
+  w.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 4500);
+}
+
+// ── resize redraw ─────────────────────────────────────────────────
+window.addEventListener('resize', () => { if (S.info) tlRedraw(); });
+
+// ── Atalhos de teclado ────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName;
+  const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+  // Espaço: play/pause (apenas fora de inputs)
+  if (e.code === 'Space' && !isTyping) {
+    e.preventDefault();
+    vid.paused ? vid.play() : vid.pause();
+    return;
+  }
+
+  // Ctrl+Z: undo
+  if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+    e.preventDefault();
+    undo(); return;
+  }
+
+  // Ctrl+Y ou Ctrl+Shift+Z: redo
+  if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+    e.preventDefault();
+    redo(); return;
+  }
+});
+</script>
+</body>
+</html>
