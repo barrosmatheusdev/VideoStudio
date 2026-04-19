@@ -1,4 +1,4 @@
-# 🎬 VideoStudio Local v2
+# 🎬 VideoStudio Local
 
 **Legendagem automática + edição + estilização + queima de legenda 100% offline**
 
