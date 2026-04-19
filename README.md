@@ -6,7 +6,7 @@ Uma ferramenta completa, leve e **totalmente local** para criar legendas profiss
 
 Perfeita para YouTubers, editores de vídeo, criadores de conteúdo e qualquer um que queira legendas bonitas sem depender de internet ou serviços pagos.
 
-![Demo](https://imgur.com/a/cuOy7cY) <!-- coloque um gif aqui depois -->
+![Demo](https://imgur.com/a/uso-do-app-videostudio-cuOy7cY) <!-- coloque um gif aqui depois -->
 
 ## ✨ Principais Recursos
 
